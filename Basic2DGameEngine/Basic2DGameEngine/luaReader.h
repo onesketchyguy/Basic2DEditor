@@ -9,10 +9,10 @@ extern "C"
 #include "lua540/include/lualib.h"
 }
 
-// Link to lua library
-#ifdef _WIN32
-#pragma comment(lib, "lua540/liblua54.a")
-#endif
+//// Link to lua library
+//#ifdef _WIN32
+//#pragma comment(lib, "lua540/liblua54.a")
+//#endif
 
 // Little error checking utility function
 bool CheckLua(lua_State* L, int r)
