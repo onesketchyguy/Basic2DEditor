@@ -4,6 +4,7 @@
 #include "CoreData.h"
 #include "LuaEditor.h"
 #include "FileManager.h"
+#include "UIObjects.h"
 
 class olcDungeonEditor : public olc::PixelGameEngine
 {
@@ -33,10 +34,7 @@ public:
 
 	bool invert = true;
 
-	olc::vi2d messagePos;
-
-	string message;
-	float messageTime;
+	vector<UIObject::TextMessage> messages;
 
 	std::string sInputBuffer;
 
@@ -48,15 +46,33 @@ public:
 	}
 
 public:
-	void CreateMessage(string _message, float timeToDisplay) {
-		message = _message;
-		messageTime = timeToDisplay;
+	void CreateMessage(string text, float timeToDisplay) {
+		UIObject::TextMessage message;
+		message.text = text;
+		message.timeRemaining = timeToDisplay;
 
-		messagePos = { ScreenWidth() / 3,ScreenHeight() / 3 };
+		messages.push_back(message);
 	}
 
-	void DisplayMessages() {
-		DrawStringDecal(messagePos, message, olc::VERY_DARK_CYAN, { 1.5f, 1.5f });
+	void DisplayMessages(float elapsedTime) {
+		olc::vi2d messagePos = { 200, 0 };
+
+		vector<UIObject::TextMessage> n_messages;
+
+		for (auto message : messages)
+		{
+			DrawStringDecal(messagePos, message.text, olc::VERY_DARK_CYAN, { 1, 1 });
+			messagePos.y += 20;
+			message.timeRemaining -= elapsedTime;
+
+			if (message.timeRemaining > 0) {
+				// Retain this message if there is still remaining time
+				n_messages.push_back(message);
+			}
+		}
+
+		messages.clear();
+		messages = n_messages;
 	}
 
 	void UpdateOnInterval() {
@@ -333,10 +349,7 @@ public:
 		DrawStringDecal({ 0,20 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f });
 		DrawPartialDecal({ 10, 30 }, rendAllWalls.decal, vTileCursor * vTileSize, vTileSize);
 
-		if (messageTime > 0) {
-			DisplayMessages();
-			messageTime -= fElapsedTime;
-		}
+		DisplayMessages(fElapsedTime);
 
 		// Enter playmode
 		if (GetKey(olc::Key::F5).bHeld) {

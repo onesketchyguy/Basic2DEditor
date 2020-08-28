@@ -2,8 +2,8 @@
 G:\repos\Basic2DEditor\Basic2DGameEngine\Basic2DGameEngine\FileManager.h(49,21): warning C4018: '<': signed/unsigned mismatch
 LINK : warning LNK4098: defaultlib 'LIBCMT' conflicts with use of other libs; use /NODEFAULTLIB:library
   Generating code
-  0 of 1483 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+  76 of 1553 functions ( 4.9%) were compiled, the rest were copied from previous compilation.
+    70 functions were new in current compilation
+    16 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Basic2DGameEngine.vcxproj -> G:\repos\Basic2DEditor\Basic2DGameEngine\Release\Basic2DGameEngine.exe

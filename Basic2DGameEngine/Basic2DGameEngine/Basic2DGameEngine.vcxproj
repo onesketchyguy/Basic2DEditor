@@ -27,6 +27,7 @@
     <ClInclude Include="luaReader.h" />
     <ClInclude Include="olcPixelGameEngine.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="UIObjects.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp" />
