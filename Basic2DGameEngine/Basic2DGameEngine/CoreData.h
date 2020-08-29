@@ -1,12 +1,14 @@
 #pragma once
 #include "olcPixelGameEngine.h"
 
+/// <summary>
+/// Initialized in lua
+/// </summary>
 bool runEditor = true;
-bool CAN_RUN_EDITOR = true;
 
 olc::vi2d vCursor = { 1, 1 };
 
-struct sCell
+struct tile
 {
 	bool wall = false;
 	olc::vi2d id[6]{  };
@@ -25,7 +27,7 @@ public:
 		vCells.resize(w * h);
 	}
 
-	sCell& GetCell(const olc::vi2d& v)
+	tile& GetCell(const olc::vi2d& v)
 	{
 		if (v.x >= 0 && v.x < size.x && v.y >= 0 && v.y < size.y)
 			return vCells[v.y * size.x + v.x];
@@ -36,21 +38,18 @@ public:
 	bool* GetWallData() {
 		bool* data = new bool[size.x * size.y];
 
-		int index = 0;
-		for (auto cell : vCells)
-		{
-			data[index] = cell.wall;
-			index++;
-		}
+		for (int i = 0; i < size.x * size.y; i++)
+			data[i] = vCells[i].wall;
 
 		return data;
 	}
 
 public:
 	olc::vi2d size;
+	olc::vi2d playerSpawnPoint;
 private:
-	std::vector<sCell> vCells;
-	sCell NullCell;
+	std::vector<tile> vCells;
+	tile NullCell;
 };
 
 World world;
@@ -108,20 +107,20 @@ std::array<vec3d, 8> CreateSprite(const olc::vi2d& vCell, const float fAngle, co
 {
 	// Unit Cube
 	std::array<vec3d, 8> unitCube, rotCube, worldCube, projCube;
-	unitCube[0] = { 0.0f, 0.0f, 0.0f };
-	unitCube[1] = { fScale, 0.0f, 0.0f };
-	unitCube[2] = { fScale, -fScale, 0.0f };
-	unitCube[3] = { 0.0f, -fScale, 0.0f };
+	unitCube[0] = { 0.0f, 0.0f, fScale };
+	unitCube[1] = { fScale, 0.0f, fScale };
+	unitCube[2] = { fScale, -fScale, fScale };
+	unitCube[3] = { 0.0f, -fScale, fScale };
 
 	// Translate Cube in X-Z Plane
 	for (int i = 0; i < 4; i++)
 	{
 		unitCube[i].x += (vCell.x * fScale - vCamera.x);
-		unitCube[i].y += -vCamera.y;
-		unitCube[i].z += ((vCell.y + 0.5f) * fScale - vCamera.z);
+		unitCube[i].y += ((fScale * 0.15f) - vCamera.y);
+		unitCube[i].z += (vCell.y + (5) * fScale - vCamera.z);
 	}
 
-	// Rotate Cube in Y-Axis around origin
+	// Rotate sprite in Y-Axis around origin
 	for (int i = 0; i < 4; i++)
 	{
 		rotCube[i].x = unitCube[i].x;
@@ -139,7 +138,7 @@ std::array<vec3d, 8> CreateSprite(const olc::vi2d& vCell, const float fAngle, co
 	{
 		projCube[i].x = worldCube[i].x + screenHeight * 0.5f;
 		projCube[i].y = worldCube[i].y + screenWidth * 0.5f;
-		projCube[i].z = worldCube[i].z;
+		projCube[i].z = worldCube[i].z + 15;
 	}
 
 	return projCube;

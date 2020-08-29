@@ -1,0 +1,2 @@
+runEditor = true
+initScene = "mapData"

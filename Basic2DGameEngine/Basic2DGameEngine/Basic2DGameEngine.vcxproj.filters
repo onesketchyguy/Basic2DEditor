@@ -30,9 +30,6 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LuaEditor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="luaReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -40,6 +37,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="UIObjects.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="luaEditor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

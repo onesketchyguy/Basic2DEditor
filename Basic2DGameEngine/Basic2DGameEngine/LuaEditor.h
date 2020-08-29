@@ -5,80 +5,85 @@
 #include <string>
 #include "luaReader.h"
 
-using namespace std;
-
-void SaveFile(string fileName, string inputData) {
-	ofstream fileStream;
+void SaveFile(std::string fileName, std::string inputData) {
+	std::ofstream fileStream;
 	fileStream.open(fileName + ".lua");
 
 	if (fileStream.is_open()) {
-		string data = "";
+		while (1) {
+			std::string data = "";
 
-		for (size_t u = 0; u < inputData.length(); u++)
-		{
-			if (data.size() < data.max_size())
-				data += inputData[u];
-			else {
-				cout << "Out of memory" << endl;
-				fileStream << data;
-				break;
+			for (size_t u = 0; u < inputData.length(); u++)
+			{
+				if (data.size() < data.max_size())
+					data += inputData[u];
+				else {
+					std::cout << "Out of memory" << std::endl;
+					fileStream << data;
+					break;
+				}
 			}
+
+			fileStream << data;
+			break;
 		}
 
-		fileStream << data;
-
-		cout << "Finished saving " << fileName << endl;
+		std::cout << "Finished saving " << fileName << std::endl;
 	}
 
 	fileStream.close();
 }
 
-const char* GetMapData(int mapX, int mapY, bool* wallData) {
-	// Goals
+/// <summary>
+/// Create a string of map data formated for a lua file.
+/// </summary>
+/// <param name="mapX"></param>
+/// <param name="mapY"></param>
+/// <param name="wallData"></param>
+/// <returns></returns>
+void SaveMapData(World worldData) {
 	// Create a map save file
-	string data;
+	std::string data;
+
+	auto wallData = worldData.GetWallData();
 
 	// Save the map X and Y
-	data += "sizeX = " + to_string(mapX) + "\n";
-	data += "sizeY = " + to_string(mapY) + "\n\n";
+	data += "sizeX = " + std::to_string(worldData.size.x) + "\n";
+	data += "sizeY = " + std::to_string(worldData.size.y) + "\n\n";
+
+	data += "pSpawnPoint = { x = " + std::to_string(worldData.playerSpawnPoint.x) + ", y = "
+		+ std::to_string(worldData.playerSpawnPoint.y) + "}\n\n";
 
 	// Save the map data to an array
 	data += "tiles = \n{";
-	for (int i = 0; i < mapX * mapY; i++)
+	for (int i = 0; i < worldData.size.x * worldData.size.y; i++)
 	{
-		int x = i % mapX;
+		int x = i % worldData.size.x;
 		if (x == 0) {
 			data += "\n\t";
 		}
 
-		data += to_string(wallData[i]) + ",";
+		data += std::to_string(wallData[i]) + ",";
 	}
 	data += "\n}\n\n";
 
 	// can't forget the get data function
 	data += "function GetMapData(index)\n\treturn tiles[index]\nend";
 
-	// Debug
-	//cout << data << endl;
-
-	return data.c_str();
-}
-
-void SaveMapData(int mapX, int mapY, bool* wallData) {
-	const char* data = GetMapData(mapX, mapY, wallData);
-	string name = "luaScripts\\";
+	std::string name = "luaScripts\\maps\\";
 	SaveFile(name + CurrentScene, data);
 }
 
-void ConstructMap(string map) {
+void ConstructMap(std::string map) {
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 
 	int mapX = 0, mapY = 0;
+	int sX = 0, sY = 0;
 
-	const char* mapLocation = ("luaScripts/" + map + ".lua").c_str();
+	std::string mapLocation = "luaScripts\\maps\\" + map + ".lua";
 
-	if (CheckLua(L, luaL_dofile(L, mapLocation))) {
+	if (CheckLua(L, luaL_dofile(L, mapLocation.c_str()))) {
 		// No Error
 		lua_getglobal(L, "sizeX");
 		if (lua_isnumber(L, -1)) {
@@ -98,16 +103,39 @@ void ConstructMap(string map) {
 			lua_pop(L, -1);
 		}
 
+		lua_getglobal(L, "pSpawnPoint");
+		if (lua_istable(L, -1)) {
+			lua_pushstring(L, "x");
+			lua_gettable(L, -2);
+			int num = (int)lua_tonumber(L, -1);
+
+			sX = num;
+			lua_pop(L, -1);
+		}
+
+		lua_getglobal(L, "pSpawnPoint");
+		if (lua_istable(L, -1)) {
+			lua_pushstring(L, "y");
+			lua_gettable(L, -2);
+			int num = (int)lua_tonumber(L, -1);
+
+			sY = num;
+			lua_pop(L, -1);
+		}
+
 		// Do a function to recieve map data from the LUA map
 		lua_getglobal(L, "GetMapData");
 		if (lua_isfunction(L, -1)) {
 			world.Create(mapX, mapY);
+
+			world.playerSpawnPoint = { sX, sY };
+
 			int size = mapX * mapY;
 
-			for (int i = 0; i < size; i++)
+			for (long i = 0; i < size; i++)
 			{
-				int x = i % mapX;
-				int y = i / mapX;
+				INT32 x = i % mapX;
+				INT32 y = i / mapX;
 
 				lua_getglobal(L, "GetMapData"); // Access the global function for map data
 				lua_pushinteger(L, i + 1); // Feed lua the index we want to access

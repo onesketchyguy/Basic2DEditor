@@ -23,7 +23,7 @@
     <ClInclude Include="Editor.h" />
     <ClInclude Include="FileManager.h" />
     <ClInclude Include="Game.h" />
-    <ClInclude Include="LuaEditor.h" />
+    <ClInclude Include="luaEditor.h" />
     <ClInclude Include="luaReader.h" />
     <ClInclude Include="olcPixelGameEngine.h" />
     <ClInclude Include="resource.h" />

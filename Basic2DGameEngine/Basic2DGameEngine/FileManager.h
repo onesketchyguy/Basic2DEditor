@@ -15,24 +15,24 @@
 
 namespace fs = std::filesystem;
 
-vector<string> mapFiles;
-string* noPaths;
+std::vector<std::string> mapFiles;
+std::string* noPaths;
 int noPathLength;
 
 std::string get_current_dir() {
 	char buff[FILENAME_MAX]; //create string buffer to hold path
 	GetCurrentDir(buff, FILENAME_MAX);
-	string current_working_dir(buff);
+	std::string current_working_dir(buff);
 	return current_working_dir;
 }
 
-vector<string> GetFiles() {
+std::vector<std::string> GetFiles(std::string loc) {
 	mapFiles.clear();
 	noPathLength = 0;
 
-	std::string path = get_current_dir() + "/luaScripts";
+	std::string path = get_current_dir() + "\\" + loc;
 	for (const auto& entry : fs::directory_iterator(path)) {
-		string name = entry.path().string();
+		std::string name = entry.path().string();
 
 		noPathLength++;
 
@@ -42,10 +42,10 @@ vector<string> GetFiles() {
 	int index = 0;
 
 	noPathLength++;
-	noPaths = new string[noPathLength];
+	noPaths = new std::string[noPathLength];
 	for (auto name : mapFiles)
 	{
-		string toAdd = "";
+		std::string toAdd = "";
 		for (int i = 0; i < name.length(); i++)
 		{
 			if (name[i] == '/' || name[i] == '\\') {

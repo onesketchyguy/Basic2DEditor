@@ -2,7 +2,7 @@
 
 #include "olcPixelGameEngine.h"
 #include "CoreData.h"
-#include "LuaEditor.h"
+#include "luaEditor.h"
 #include "FileManager.h"
 #include "UIObjects.h"
 
@@ -14,6 +14,7 @@ public:
 		sAppName = "Dungeon Explorer";
 	}
 
+	Renderable playerSpawnPoint;
 	Renderable rendSelect;
 	Renderable rendAllWalls;
 
@@ -34,8 +35,6 @@ public:
 
 	bool invert = true;
 
-	vector<UIObject::TextMessage> messages;
-
 	std::string sInputBuffer;
 
 	std::string FlushInput(std::string target = "")
@@ -46,20 +45,13 @@ public:
 	}
 
 public:
-	void CreateMessage(string text, float timeToDisplay) {
-		UIObject::TextMessage message;
-		message.text = text;
-		message.timeRemaining = timeToDisplay;
-
-		messages.push_back(message);
-	}
 
 	void DisplayMessages(float elapsedTime) {
 		olc::vi2d messagePos = { 200, 0 };
 
-		vector<UIObject::TextMessage> n_messages;
+		std::vector<UIObject::TextMessage> n_messages;
 
-		for (auto message : messages)
+		for (auto message : textMessages)
 		{
 			DrawStringDecal(messagePos, message.text, olc::VERY_DARK_CYAN, { 1, 1 });
 			messagePos.y += 20;
@@ -71,8 +63,8 @@ public:
 			}
 		}
 
-		messages.clear();
-		messages = n_messages;
+		textMessages.clear();
+		textMessages = n_messages;
 	}
 
 	void UpdateOnInterval() {
@@ -88,7 +80,7 @@ public:
 		timeBeforeUpdate = timeBetweenUpdates;
 	}
 
-	void TryLoadMap(string map) {
+	void TryLoadMap(std::string map) {
 		if (map == "New...") {
 			// Get input from the user to set the name of the map
 			sInputBuffer = "";
@@ -107,6 +99,7 @@ public:
 	{
 		runEditor = false;
 
+		playerSpawnPoint.Load("./gfx/player.png");
 		rendSelect.Load("./gfx/dng_select.png");
 		rendAllWalls.Load("./gfx/oldDungeon.png");
 
@@ -138,7 +131,7 @@ public:
 		UpdateOnInterval();
 
 		if (creatingNew) {
-			string title = "New map name: ";
+			std::string title = "New map name: ";
 			DrawStringDecal({ 0,0 }, title + sInputBuffer + (invert ? '_' : ' '), olc::YELLOW, { 0.5f, 0.5f });
 
 			int shift = !GetKey(olc::Key::SHIFT).bHeld ? 96 : 64;
@@ -188,7 +181,7 @@ public:
 		{
 			// Open a debug menu
 			loading = !loading;
-			if (loading) GetFiles();
+			if (loading) GetFiles("luaScripts\\maps");
 		}
 
 		if (loading) {
@@ -231,9 +224,9 @@ public:
 		if (GetKey(olc::Key::D).bHeld) fCameraAngleTarget += 1.0f * fElapsedTime;
 		if (GetKey(olc::Key::A).bHeld) fCameraAngleTarget -= 1.0f * fElapsedTime;
 
-		// QZ Keys to zoom in or out
-		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
-		if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
+		// zoom in or out
+		if (GetMouseWheel() > 0) fCameraZoom += 150.0f * fElapsedTime;
+		if (GetMouseWheel() < 0) fCameraZoom -= 150.0f * fElapsedTime;
 
 		// Numpad keys used to rotate camera to fixed angles
 		if (GetKey(olc::Key::NP2).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
@@ -272,6 +265,13 @@ public:
 		if (GetKey(olc::Key::DOWN).bPressed) {
 			vCursor.y++;
 			timeBeforeUpdate = timeBetweenUpdates;
+		}
+
+		// Set player spawn
+		if (GetKey(olc::Key::P).bPressed) {
+			world.playerSpawnPoint = vCursor;
+			CreateMessage("Set player spawn: " + std::to_string(vCursor.x) + "," +
+				std::to_string(vCursor.y), 2);
 		}
 
 		if (lastCursorPos.x != vCursor.x || lastCursorPos.y != vCursor.y) {
@@ -334,16 +334,21 @@ public:
 		for (auto& q : vQuads)
 			DrawWarpedDecal(rendSelect.decal, { {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
 
+		vQuads.clear();
+		GetFaceQuads(world.playerSpawnPoint, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads);
+		for (auto& q : vQuads)
+			DrawWarpedDecal(playerSpawnPoint.decal, { {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
+
 		// Save key
 		if (GetKey(olc::Key::F3).bPressed) {
-			SaveMapData(world.size.x, world.size.y, world.GetWallData());
+			SaveMapData(world);
 			CreateMessage("Saved.", 1);
 		}
 
 		// 7) Draw some debug info
 		olc::vi2d scale = { ScreenWidth(), 30 };
 		FillRectDecal({ 0,0 }, scale, olc::BLACK);
-		string editing = "Currently editing: ";
+		std::string editing = "Currently editing: ";
 		DrawStringDecal({ 0,0 }, editing + CurrentScene, olc::YELLOW, { 0.5f, 0.5f });
 		DrawStringDecal({ 0,10 }, "Cursor: " + std::to_string(vCursor.x) + ", " + std::to_string(vCursor.y), olc::YELLOW, { 0.5f, 0.5f });
 		DrawStringDecal({ 0,20 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f });

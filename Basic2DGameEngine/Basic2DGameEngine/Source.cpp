@@ -59,7 +59,7 @@
 #include "CoreData.h"
 #include "Editor.h"
 #include "Game.h"
-#include "LuaEditor.h"
+#include "luaEditor.h"
 
 int pScale = 2;
 
@@ -75,8 +75,47 @@ void ConstructGame() {
 		game.Start();
 }
 
+void SetupSettings()
+{
+	lua_State* L = luaL_newstate();
+	luaL_openlibs(L);
+
+	int mapX = 0, mapY = 0;
+	int sX = 0, sY = 0;
+
+	std::string mapLocation = "luaScripts\\settings.lua";
+
+	if (CheckLua(L, luaL_dofile(L, mapLocation.c_str()))) {
+		// Set wether or not to run the editor
+		lua_getglobal(L, "runEditor");
+		if (lua_isboolean(L, -1)) {
+			runEditor = (bool)lua_toboolean(L, -1);
+			std::cout << "runEditor initialized to: " << runEditor << std::endl;
+			lua_pop(L, -1);
+		}
+		// Which level should be the first level
+		lua_getglobal(L, "initScene");
+		if (lua_isstring(L, -1)) {
+			CurrentScene = (std::string)lua_tostring(L, -1);
+			std::cout << "CurrentScene initalized to: " << CurrentScene << std::endl;
+			lua_pop(L, -1);
+		}
+	}
+	else {
+		// Log Error
+		std::string errorMessage = lua_tostring(L, -1);
+		std::cout << errorMessage << std::endl;
+	}
+
+	// Close this lua instance once we have completed as we won't continue using it.
+	lua_close(L);
+
+	runEditor = false;
+}
+
 int main()
 {
+	SetupSettings();
 	ConstructMap(CurrentScene);
 
 	screenHeight = 360;
@@ -92,6 +131,8 @@ int main()
 		}
 		else {
 			ConstructGame();
+
+			if (runEditor) continue;
 
 			break;
 		}

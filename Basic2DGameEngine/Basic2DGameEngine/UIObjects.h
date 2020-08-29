@@ -21,3 +21,13 @@ namespace  UIObject {
 	{
 	}
 }
+
+std::vector<UIObject::TextMessage> textMessages;
+
+void CreateMessage(std::string text, float timeToDisplay) {
+	UIObject::TextMessage message;
+	message.text = text;
+	message.timeRemaining = timeToDisplay;
+
+	textMessages.push_back(message);
+}

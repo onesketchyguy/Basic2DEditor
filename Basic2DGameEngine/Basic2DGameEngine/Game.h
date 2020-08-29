@@ -2,6 +2,13 @@
 #include "olcPixelGameEngine.h"
 #include "CoreData.h"
 
+class Drawable {
+public:
+	olc::Decal* decal;
+	sQuad quad;
+	olc::vf2d scale;
+};
+
 class olcDungeonPlayer : public olc::PixelGameEngine
 {
 public:
@@ -28,6 +35,47 @@ public:
 	float timeBetweenUpdates = .1f;
 
 public:
+	std::vector<Drawable> drawables;
+
+	void DrawQuad(olc::Decal* decal, sQuad quad, olc::vi2d scale) {
+		Drawable drawable;
+		drawable.decal = decal;
+		drawable.quad = quad;
+		drawable.scale = scale;
+
+		drawables.push_back(drawable);
+	}
+
+	void DrawDrawables() {
+		std::sort(drawables.begin(), drawables.end(), [](const Drawable& a, const Drawable& b)
+			{
+				auto q1 = a.quad;
+				auto q2 = b.quad;
+
+				float z1 = (q1.points[0].z + q1.points[1].z + q1.points[2].z + q1.points[3].z) * 0.25f;
+				float z2 = (q2.points[0].z + q2.points[1].z + q2.points[2].z + q2.points[3].z) * 0.25f;
+				return z1 < z2;
+			});
+
+		for (auto drawbale : drawables) {
+			DrawPartialWarpedDecal
+			(
+				drawbale.decal,
+				{
+					{drawbale.quad.points[0].x, drawbale.quad.points[0].y},
+					{drawbale.quad.points[1].x, drawbale.quad.points[1].y},
+					{drawbale.quad.points[2].x, drawbale.quad.points[2].y},
+					{drawbale.quad.points[3].x, drawbale.quad.points[3].y}
+				},
+
+				drawbale.quad.tile,
+				drawbale.scale
+			);
+		}
+
+		drawables.clear();
+	}
+
 	void UpdateCursorPosition() {
 		if (GetKey(olc::Key::LEFT).bHeld) vCursor.x--;
 		if (GetKey(olc::Key::RIGHT).bHeld) vCursor.x++;
@@ -59,11 +107,13 @@ public:
 				}
 		}
 
+		fCameraPitch = 5.8f;
 		fCameraAngle = 3.14159f * 1.75f;
 		fCameraAngleTarget = fCameraAngle;
 		fCameraZoom = gameplayZoom;
 		fCameraZoomTarget = fCameraZoom;
 
+		vCursor = { world.playerSpawnPoint.x, world.playerSpawnPoint.y };
 		vCameraPos = { vCursor.x + 0.5f, vCursor.y + 0.5f };
 
 		return true;
@@ -146,11 +196,10 @@ public:
 		// 4) Iterate through all "tile cubes" and draw their visible faces
 		Clear(olc::BLACK);
 		for (auto& q : vQuads)
-			DrawPartialWarpedDecal
+			DrawQuad
 			(
 				rendAllWalls.decal,
-				{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
-				q.tile,
+				q,
 				vTileSize
 			);
 
@@ -159,28 +208,18 @@ public:
 		sQuad playerQuad;
 		GetSpriteQuads(vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, playerQuad);
 
-		DrawWarpedDecal(rendPlayer.decal,
-			{
-				{
-					playerQuad.points[0].x,
-					playerQuad.points[0].y
-				},
-				{
-					playerQuad.points[1].x,
-					playerQuad.points[1].y
-				},
-				{
-					playerQuad.points[2].x,
-					playerQuad.points[2].y
-				},
-				{
-					playerQuad.points[3].x,
-					playerQuad.points[3].y
-				}
-			});
+		DrawQuad(rendPlayer.decal, playerQuad, vTileSize);
 
 		// 7) Draw some debug info
 		//DrawStringDecal({ 0,0 }, "User: " + std::to_string(vCursor.x) + ", " + std::to_string(vCursor.y), olc::YELLOW, { 0.5f, 0.5f });
+
+		DrawDrawables();
+
+		// Debug let the user run the editor
+		if (GetKey(olc::Key::CTRL).bHeld && GetKey(olc::Key::F5).bReleased) {
+			runEditor = true;
+			return false;
+		}
 
 		// Graceful exit if user is in full screen mode
 		return !GetKey(olc::Key::ESCAPE).bPressed;
