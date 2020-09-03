@@ -100,6 +100,23 @@ void SetupSettings()
 			std::cout << "CurrentScene initalized to: " << CurrentScene << std::endl;
 			lua_pop(L, -1);
 		}
+		// Load map texturemap
+		lua_getglobal(L, "tileMap");
+		if (lua_isstring(L, -1)) {
+			tileMapLocation = (std::string)lua_tostring(L, -1);
+			std::cout << "texture map initalized to: " << tileMapLocation << std::endl;
+			lua_pop(L, -1);
+		}
+
+		lua_getglobal(L, "tileSize");
+		if (lua_isnumber(L, -1)) {
+			int i = (int)lua_tonumber(L, -1);
+			std::cout << "tile size initalized to: " << i << std::endl;
+
+			vTileSize = { i,i };
+
+			lua_pop(L, -1);
+		}
 	}
 	else {
 		// Log Error

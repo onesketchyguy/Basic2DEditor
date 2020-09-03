@@ -17,31 +17,56 @@ public:
 		sAppName = "Dungeon Explorer";
 	}
 
-	Renderable rendSelect;
-	Renderable rendPlayer;
-	Renderable rendAllWalls;
+	olc::vi2d playerPos = { 0.0f, 0.0f };
+	olc::vi2d targetPlayerPos = { 0.0f, 0.0f };
 
-	olc::vf2d vCameraPos = { 0.0f, 0.0f };
-	float fCameraAngle = 0.0f;
-	float fCameraAngleTarget = fCameraAngle;
-	float fCameraPitch = 5.5f;
-	float fCameraZoom = 16.0f;
-	float fCameraZoomTarget = fCameraZoom;
-
+	const float gameplayAngle = pi * 1.75f;
 	float cinematicZoom = 60.0f;
 	float gameplayZoom = 30.0f;
+
+	olc::vf2d vCameraPos = { 0.0f, 0.0f };
+	float fCameraAngle = gameplayAngle;
+	float fCameraAngleTarget = fCameraAngle;
+	float fCameraPitch = 5.8f;
+	float fCameraZoom = gameplayZoom;
+	float fCameraZoomTarget = fCameraZoom;
+
+	float smoothing;
 
 	float timeBeforeUpdate;
 	float timeBetweenUpdates = .1f;
 
+	bool movingCamera;
+	olc::vi2d clickPos;
+
 public:
 	std::vector<Drawable> drawables;
 
-	void DrawQuad(olc::Decal* decal, sQuad quad, olc::vi2d scale) {
+	void UpdateOnInterval() {
+		if (timeBeforeUpdate > 0) return;
+
+		if (targetPlayerPos.x != playerPos.x || targetPlayerPos.y != playerPos.y)
+		{
+			int x = (targetPlayerPos.x - playerPos.x);
+			int y = (targetPlayerPos.y - playerPos.y);
+
+			if (x > 1) x = 1; if (x < -1) x = -1;
+			if (y > 1) y = 1; if (y < -1) y = -1;
+
+			playerPos.x += x;
+			playerPos.y += y;
+		}
+
+		timeBeforeUpdate = timeBetweenUpdates;
+	}
+
+	void DrawQuad(olc::Decal* decal, sQuad quad) {
 		Drawable drawable;
 		drawable.decal = decal;
 		drawable.quad = quad;
-		drawable.scale = scale;
+		drawable.scale = vTileSize;
+
+		// We should calculate if this tile is even visable
 
 		drawables.push_back(drawable);
 	}
@@ -67,7 +92,6 @@ public:
 					{drawbale.quad.points[2].x, drawbale.quad.points[2].y},
 					{drawbale.quad.points[3].x, drawbale.quad.points[3].y}
 				},
-
 				drawbale.quad.tile,
 				drawbale.scale
 			);
@@ -76,20 +100,11 @@ public:
 		drawables.clear();
 	}
 
-	void UpdateCursorPosition() {
-		if (GetKey(olc::Key::LEFT).bHeld) vCursor.x--;
-		if (GetKey(olc::Key::RIGHT).bHeld) vCursor.x++;
-		if (GetKey(olc::Key::UP).bHeld) vCursor.y--;
-		if (GetKey(olc::Key::DOWN).bHeld) vCursor.y++;
-
-		timeBeforeUpdate = timeBetweenUpdates;
-	}
-
 	bool OnUserCreate() override
 	{
-		rendSelect.Load("./gfx/dng_select.png");
 		rendPlayer.Load("./gfx/player.png");
-		rendAllWalls.Load("./gfx/oldDungeon.png");
+		rendSelect.Load("./gfx/dng_select.png");
+		rendAllWalls.Load("./gfx/" + tileMapLocation + ".png");
 
 		if (world.size.x == 0) { // if there is no world data create a demo world
 			world.Create(64, 64);
@@ -107,14 +122,16 @@ public:
 				}
 		}
 
-		fCameraPitch = 5.8f;
-		fCameraAngle = 3.14159f * 1.75f;
+		fCameraAngle = gameplayAngle;
 		fCameraAngleTarget = fCameraAngle;
 		fCameraZoom = gameplayZoom;
 		fCameraZoomTarget = fCameraZoom;
 
-		vCursor = { world.playerSpawnPoint.x, world.playerSpawnPoint.y };
-		vCameraPos = { vCursor.x + 0.5f, vCursor.y + 0.5f };
+		playerPos = { world.playerSpawnPoint.x, world.playerSpawnPoint.y };
+		targetPlayerPos = { playerPos.x, playerPos.y };
+		vCursor = { playerPos.x, playerPos.y };
+		vCameraPos = { playerPos.x + 0.5f, playerPos.y + 0.5f };
+		vCameraPos *= fCameraZoom;
 
 		return true;
 	}
@@ -122,55 +139,74 @@ public:
 	bool OnUserUpdate(float fElapsedTime) override
 	{
 		// Grab mouse for convenience
-		olc::vi2d vMouse = { GetMouseX(), GetMouseY() };
+		olc::vi2d mouseCellPos =
+		{
+			(int)(((float)GetMouseX() / (float)screenWidth) * world.size.x),
+			(int)(((float)GetMouseY() / (float)screenHeight) * world.size.y)
+		};
+
+		// Send the mousePos into world space
+		// Somehow...
+		olc::vf2d worldMousePos =
+		{
+			(vCameraPos.x / fCameraZoom) + ((int)mouseCellPos.x / (float)cos(fCameraAngle)),
+			(vCameraPos.y / fCameraZoom) + ((int)mouseCellPos.y / (float)sin(fCameraAngle))
+		};
 
 		// QZ Keys to zoom in or out
 		if (GetKey(olc::Key::Q).bHeld) fCameraZoomTarget = cinematicZoom;
 		if (GetKey(olc::Key::Z).bHeld)  fCameraZoomTarget = gameplayZoom;
 
 		// Smooth camera
-		float smoothing = 10.0f * fElapsedTime;
+		smoothing = 10.0f * fElapsedTime;
 
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * smoothing;
 		fCameraZoom += (fCameraZoomTarget - fCameraZoom) * smoothing;
 
 		// Arrow keys to move the selection cursor around map (boundary checked)
 
-		olc::vi2d lastCursorPos = { vCursor.x, vCursor.y };
-
-		if (GetKey(olc::Key::LEFT).bPressed) {
-			vCursor.x--;
-			timeBeforeUpdate = timeBetweenUpdates;
-		}
-		if (GetKey(olc::Key::RIGHT).bPressed) {
-			vCursor.x++;
-			timeBeforeUpdate = timeBetweenUpdates;
-		}
-		if (GetKey(olc::Key::UP).bPressed) {
-			vCursor.y--;
-			timeBeforeUpdate = timeBetweenUpdates;
-		}
-		if (GetKey(olc::Key::DOWN).bPressed) {
-			vCursor.y++;
-			timeBeforeUpdate = timeBetweenUpdates;
-		}
-
-		if (timeBeforeUpdate <= 0)
-			UpdateCursorPosition();
 		timeBeforeUpdate -= fElapsedTime;
+		UpdateOnInterval();
+
+		if (GetKey(olc::Key::A).bHeld) vCameraPos.x--;
+		if (GetKey(olc::Key::D).bHeld) vCameraPos.x++;
+		if (GetKey(olc::Key::W).bHeld) vCameraPos.y--;
+		if (GetKey(olc::Key::S).bHeld) vCameraPos.y++;
+
+		// Move player with mouse
+		if (GetMouse(0).bPressed)
+		{
+			clickPos = mouseCellPos;
+		}
+
+		if (GetMouse(0).bHeld)
+		{
+			movingCamera = (clickPos.x != mouseCellPos.x || clickPos.y != mouseCellPos.y);
+
+			if (movingCamera)
+			{
+				vCameraPos.x += (clickPos.x - mouseCellPos.x) * smoothing;
+				vCameraPos.y += (clickPos.y - mouseCellPos.y) * smoothing;
+			}
+		}
+
+		if (GetMouse(0).bReleased)
+		{
+			if (movingCamera == false)
+				if (world.GetCell(mouseCellPos).wall == false)
+					targetPlayerPos = mouseCellPos;
+
+			movingCamera = false;
+		}
 
 		if (vCursor.x < 0) vCursor.x = 0;
 		if (vCursor.y < 0) vCursor.y = 0;
 		if (vCursor.x >= world.size.x) vCursor.x = world.size.x - 1;
 		if (vCursor.y >= world.size.y) vCursor.y = world.size.y - 1;
 
-		if (world.GetCell(vCursor).wall) {
-			vCursor = lastCursorPos;
-		}
-
 		// Position camera in world
-		vCameraPos = { vCursor.x + 0.5f, vCursor.y + 0.5f };
-		vCameraPos *= fCameraZoom;
+		//vCameraPos = { vCursor.x + 0.5f, vCursor.y + 0.5f };
+		//vCameraPos *= fCameraZoom;
 
 		// Rendering
 
@@ -196,24 +232,36 @@ public:
 		// 4) Iterate through all "tile cubes" and draw their visible faces
 		Clear(olc::BLACK);
 		for (auto& q : vQuads)
-			DrawQuad
-			(
-				rendAllWalls.decal,
-				q,
-				vTileSize
-			);
+			DrawQuad(rendAllWalls.decal, q);
 
-		// 6) Draw selection "tile cube"
+		// Place a cursor in world
+		vQuads.clear();
+		GetFaceQuads(mouseCellPos, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads);
+		for (auto& q : vQuads)
+			DrawQuad(rendSelect.decal, q);
 
-		sQuad playerQuad;
-		GetSpriteQuads(vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, playerQuad);
+		vQuads.clear();
+		GetFaceQuads(worldMousePos, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads);
+		for (auto& q : vQuads)
+			DrawQuad(rendSelect.decal, q);
 
-		DrawQuad(rendPlayer.decal, playerQuad, vTileSize);
+		// Numpad keys used to rotate camera to fixed angles
+		if (GetKey(olc::Key::NP1).bHeld) fCameraAngleTarget -= pi * fElapsedTime;
+		if (GetKey(olc::Key::NP2).bHeld) fCameraAngleTarget = gameplayAngle;
+		if (GetKey(olc::Key::NP3).bHeld) fCameraAngleTarget += pi * fElapsedTime;
+		if (GetKey(olc::Key::NP5).bHeld) fCameraAngleTarget = 0;
+
+		// 6) Draw player
+		vQuads.clear();
+		GetSpriteQuads(playerPos, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads);
+
+		DrawQuad(rendPlayer.decal, vQuads.back());
+		DrawDrawables();
 
 		// 7) Draw some debug info
 		//DrawStringDecal({ 0,0 }, "User: " + std::to_string(vCursor.x) + ", " + std::to_string(vCursor.y), olc::YELLOW, { 0.5f, 0.5f });
-
-		DrawDrawables();
+		DrawStringDecal({ 0,0 }, "Mouse Cell: " + std::to_string(mouseCellPos.x) + ", " + std::to_string(mouseCellPos.y), olc::YELLOW, { 0.5f, 0.5f });
+		DrawStringDecal({ 0,10 }, "World Cell: " + std::to_string(worldMousePos.x) + ", " + std::to_string(worldMousePos.y), olc::YELLOW, { 0.5f, 0.5f });
 
 		// Debug let the user run the editor
 		if (GetKey(olc::Key::CTRL).bHeld && GetKey(olc::Key::F5).bReleased) {

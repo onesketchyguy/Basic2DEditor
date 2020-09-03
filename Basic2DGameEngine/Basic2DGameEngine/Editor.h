@@ -14,10 +14,6 @@ public:
 		sAppName = "Dungeon Explorer";
 	}
 
-	Renderable playerSpawnPoint;
-	Renderable rendSelect;
-	Renderable rendAllWalls;
-
 	olc::vf2d vCameraPos = { 0.0f, 0.0f };
 	float fCameraAngle = 0.0f;
 	float fCameraAngleTarget = fCameraAngle;
@@ -99,9 +95,9 @@ public:
 	{
 		runEditor = false;
 
-		playerSpawnPoint.Load("./gfx/player.png");
+		rendPlayer.Load("./gfx/player.png");
 		rendSelect.Load("./gfx/dng_select.png");
-		rendAllWalls.Load("./gfx/oldDungeon.png");
+		rendAllWalls.Load("./gfx/" + tileMapLocation + ".png");
 
 		if (world.size.x == 0) { // if there is no world data create a demo world
 			world.Create(64, 64);
@@ -268,7 +264,7 @@ public:
 		}
 
 		// Set player spawn
-		if (GetKey(olc::Key::P).bPressed) {
+		if (GetKey(olc::Key::SPACE).bPressed && GetKey(olc::Key::SHIFT).bHeld) {
 			world.playerSpawnPoint = vCursor;
 			CreateMessage("Set player spawn: " + std::to_string(vCursor.x) + "," +
 				std::to_string(vCursor.y), 2);
@@ -337,7 +333,7 @@ public:
 		vQuads.clear();
 		GetFaceQuads(world.playerSpawnPoint, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads);
 		for (auto& q : vQuads)
-			DrawWarpedDecal(playerSpawnPoint.decal, { {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
+			DrawWarpedDecal(rendPlayer.decal, { {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
 
 		// Save key
 		if (GetKey(olc::Key::F3).bPressed) {
