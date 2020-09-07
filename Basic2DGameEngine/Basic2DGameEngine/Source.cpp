@@ -138,22 +138,7 @@ int main()
 	screenHeight = 360;
 	screenWidth = 440;
 
-	while (true) {
-		if (runEditor == true) {
-			ConstructEditor();
-
-			if (runEditor == false) break;
-
-			ConstructGame();
-		}
-		else {
-			ConstructGame();
-
-			if (runEditor) continue;
-
-			break;
-		}
-	}
+	ConstructGame();
 
 	return 0;
 }

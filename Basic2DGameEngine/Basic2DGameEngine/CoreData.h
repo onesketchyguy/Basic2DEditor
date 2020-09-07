@@ -7,6 +7,8 @@
 bool runEditor = true;
 std::string tileMapLocation;
 
+const double pi = 3.14159265359;
+
 olc::vi2d vCursor = { 1, 1 };
 Renderable rendAllWalls;
 Renderable rendSelect;
@@ -97,5 +99,6 @@ void GetSpriteQuads(const olc::vi2d& vCell, const float fAngle, const float fPit
 		render.push_back({ projSprite[v1], projSprite[v2], projSprite[v3], projSprite[v4], cell.id[f] });
 	};
 
-	MakeFace(3, 0, 1, 2, Face::Top);
+	MakeFace(3, 0, 1, 2, Face::North);
+	MakeFace(7, 4, 5, 6, Face::South);
 }

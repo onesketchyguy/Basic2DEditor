@@ -59,6 +59,11 @@ std::array<vec3d, 8> CreateSprite(const olc::vi2d& vCell, const float fAngle, co
 	unitCube[2] = { one, -one, zero };
 	unitCube[3] = { zero, -one, one };
 
+	unitCube[4] = { one, zero, one };
+	unitCube[5] = { zero, zero, zero };
+	unitCube[6] = { zero, -one, zero };
+	unitCube[7] = { one, -one, one };
+
 	// Translate Cube in X-Z Plane
 	for (int i = 0; i < 8; i++)
 	{
@@ -70,7 +75,7 @@ std::array<vec3d, 8> CreateSprite(const olc::vi2d& vCell, const float fAngle, co
 	float s = sin(fAngle);
 	float c = cos(fAngle);
 	// Rotate sprite in Y-Axis around origin
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 8; i++)
 	{
 		rotCube[i].x = unitCube[i].x * c + unitCube[i].z * s;
 		rotCube[i].y = unitCube[i].y;

@@ -257,8 +257,6 @@ namespace _gfs = std::filesystem;
 #define OLC_GFX_OPENGL10
 #endif
 
-const double pi = 3.14159265359;
-
 bool SortByFirst(const std::pair<float, float>& a, const std::pair<float, float>& b)
 {
 	return (a.first < b.first);
