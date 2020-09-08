@@ -1,11 +1,16 @@
 #pragma once
 #include "rendering.h"
 
+bool runApplication = true;
+
 /// <summary>
 /// Initialized in lua
 /// </summary>
 bool runEditor = true;
 std::string tileMapLocation;
+bool developerMode = false;
+
+bool menuOpen;
 
 const double pi = 3.14159265359;
 
